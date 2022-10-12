@@ -14,9 +14,10 @@ my_bro.save_screenshot('.\\screen\\' + scrensot_name)
 my_bro.quit()
 
 #todo: tidy up the code
-#todo: put screenshotting into class
-#todo: add create scrnsht folder + check
+#todo: put screenshotting into class?
+#todo: add. create scrnsht folder + check
 
 print(name_your_file())
 
 print('*****')
+
