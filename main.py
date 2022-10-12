@@ -16,6 +16,10 @@ my_bro.quit()
 #todo: tidy up the code
 #todo: put screenshotting into class
 #todo: add create scrnsht folder + check
+#todo: webdriver checker/downloader. how to check current chrome version 
+#todo visual mode / report mode
+#todo higthlight using page area 
+
 
 print(name_your_file())
 
