@@ -4,10 +4,10 @@ import sys
 
 from selenium import webdriver
 
-from Filename_creating import name_your_file
+from Filename_creating import name_my_file
 
 
-scrensot_name = name_your_file()+'.png'
+scrensot_name = name_my_file()
 my_bro = webdriver.Chrome()
 my_bro.get('https://google.com/')
 my_bro.save_screenshot('.\\screen\\' + scrensot_name)
@@ -21,6 +21,6 @@ my_bro.quit()
 #todo higthlight using page area 
 
 
-print(name_your_file())
+print(name_my_file())
 
 print('*****')
