@@ -1,10 +1,10 @@
-'''
 
-''''''
+"""
 preconditions
     config
         browsers
         window size - param
+        screenshot path
     test data
         base URL start_point?
         create
@@ -28,5 +28,4 @@ reports
         path todo param path 
     allure
     telegram
-
-
+"""

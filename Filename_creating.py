@@ -5,7 +5,7 @@ import sys
 
 def name_my_file():
     """
-    creates a filename from current date, script name and extension
+    creates a filename from current date, script name and file extension
     :return: string
     todo: add url endpoint. necessary? markup?
     """
@@ -13,17 +13,17 @@ def name_my_file():
     current_script_name = os.path.basename(sys.argv[0])
     file_extension = '.png'
 
-    screenshot_name=current_time+'_'+current_script_name+file_extension
+    file_name=current_time+'_'+current_script_name+file_extension
 
     if __name__ == '__main__':
 
-        print('------------')
-        print('current_time from datetime \n', current_time)
-        print('current filename\n', current_script_name)
-        print('returned value:\n', screenshot_name)
-        print('------------')
+        print('-----===-----===-----')
+        print('Current time:\n    ', current_time)
+        print('Current filename:\n    ', current_script_name)
+        print('Returned value:\n    ', file_name)
+        print('-----===-----===-----')
 
-    return screenshot_name
+    return file_name
 
 
 if __name__ == '__main__':
