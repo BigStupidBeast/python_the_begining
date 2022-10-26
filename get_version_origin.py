@@ -1,49 +1,130 @@
-# selenium 4
-from selenium import webdriver
+import datetime
+import os
+import platform
+import re
+import subprocess
+import sys
+
+# from tqdm import tqdm
+#
+# from webdriver_manager.core.archive import Archive
+# from webdriver_manager.core.logger import log
+#
+#
+# class File(object):
+#     def __init__(self, stream):
+#         self.content = stream.content
+#         self.__stream = stream
+#         self.__temp_name = "driver"
+#
+#     @property
+#     def filename(self) -> str:
+#         try:
+#             filename = re.findall(
+#                 "filename=(.+)", self.__stream.headers["content-disposition"]
+#             )[0]
+#         except KeyError:
+#             filename = f"{self.__temp_name}.zip"
+#         except IndexError:
+#             filename = f"{self.__temp_name}.exe"
+#
+#         if '"' in filename:
+#             filename = filename.replace('"', "")
+#
+#         return filename
+#
+#
+# def save_file(file: File, directory: str):
+#     os.makedirs(directory, exist_ok=True)
+#
+#     archive_path = f"{directory}{os.sep}{file.filename}"
+#     with open(archive_path, "wb") as code:
+#         code.write(file.content)
+#     return Archive(archive_path, os_type=os_name())
 
 
+class OSType(object):
+    LINUX = "linux"
+    MAC = "mac"
+    WIN = "win"
 
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
-
-ChromeDriverManager(path = r".").install()
-my_bro_chr = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
-my_bro_chr.quit()
-
-my_bro_chr = webdriver.Chrome(".\\.wdm\\drivers\\chromedriver\\win32\\106.0.5249\\chromedriver.exe")
-my_bro_chr.get('https://google.com/')
-
-# def check_my_bro():
-#     my_bro_chr = webdriver.Chrome()
-#     my_bro_chr.get('https://google.com/')
-#
-#
-# check_my_bro()
-#
-# def create_firefox():
-#     from selenium.webdriver.firefox.service import Service as FirefoxService
-#     from webdriver_manager.firefox import GeckoDriverManager
-#
-#     driverFf = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()))
-#     GeckoDriverManager(path = r".\\Drivers").install()
-#     driverFf.quit()
-#
-#
-# def create_brave ():
-#
-#     from selenium.webdriver.chrome.service import Service as BraveService
-#     from webdriver_manager.chrome import ChromeDriverManager
-#     from webdriver_manager.core.utils import ChromeType
-#
-#     ChromeDriverManager(path = r".\\Drivers").install()
-#     driverBr = webdriver.Chrome(service=BraveService(ChromeDriverManager(chrome_type=ChromeType.BRAVE).install()))
-#     driverBr.get('https://google.com/')
 
 class ChromeType(object):
     GOOGLE = "google-chrome"
     CHROMIUM = "chromium"
     BRAVE = "brave-browser"
     MSEDGE = "edge"
+
+
+PATTERN = {
+    ChromeType.CHROMIUM: r"\d+\.\d+\.\d+",
+    ChromeType.GOOGLE: r"\d+\.\d+\.\d+",
+    ChromeType.MSEDGE: r"\d+\.\d+\.\d+",
+    "brave-browser": r"(\d+)",
+    "firefox": r"(\d+.\d+)",
+}
+
+
+def os_name():
+    pl = sys.platform
+    if pl == "linux" or pl == "linux2":
+        return OSType.LINUX
+    elif pl == "darwin":
+        return OSType.MAC
+    elif pl == "win32":
+        return OSType.WIN
+
+
+def os_architecture():
+    if platform.machine().endswith("64"):
+        return 64
+    else:
+        return 32
+
+
+def os_type():
+    return f"{os_name()}{os_architecture()}"
+
+
+def is_arch(os_sys_type):
+    if '_m1' in os_sys_type:
+        return True
+    return platform.processor() != 'i386'
+
+
+def is_mac_os(os_sys_type):
+    return OSType.MAC in os_sys_type
+
+
+def get_date_diff(date1, date2, date_format):
+    a = datetime.datetime.strptime(date1, date_format)
+    b = datetime.datetime.strptime(
+        str(date2.strftime(date_format)), date_format)
+
+    return (b - a).days
+
+
+def linux_browser_apps_to_cmd(*apps: str) -> str:
+    """Create 'browser --version' command from browser app names.
+
+    Result command example:
+        chromium --version || chromium-browser --version
+    """
+    ignore_errors_cmd_part = " 2>/dev/null" if os.getenv(
+        "WDM_LOG_LEVEL") == "0" else ""
+    return " || ".join(f"{i} --version{ignore_errors_cmd_part}" for i in apps)
+
+
+def windows_browser_apps_to_cmd(*apps: str) -> str:
+    """Create analogue of browser --version command for windows."""
+    powershell = determine_powershell()
+
+    first_hit_template = """$tmp = {expression}; if ($tmp) {{echo $tmp; Exit;}};"""
+    script = "$ErrorActionPreference='silentlycontinue'; " + " ".join(
+        first_hit_template.format(expression=e) for e in apps
+    )
+
+    return f'{powershell} -NoProfile "{script}"'
 
 
 def get_browser_version_from_os(browser_type=None):
@@ -143,3 +224,71 @@ def get_browser_version_from_os(browser_type=None):
     except Exception:
         raise Exception(f"Can not find browser {browser_type} installed in your system!!!")
 
+
+def format_version(browser_type, version):
+    if not version or version == 'latest':
+        return 'latest'
+    try:
+        pattern = PATTERN[browser_type]
+        result = re.search(pattern, version)
+        return result.group(0) if result else version
+    except:
+        return "latest"
+
+
+def get_browser_version(browser_type, metadata):
+    pattern = PATTERN[browser_type]
+    version_from_os = metadata['version']
+    result = re.search(pattern, version_from_os)
+    version = result.group(0) if version_from_os else None
+    if not version:
+        print(
+            f"Could not get version for {browser_type}. "
+            f"Is {browser_type} installed?"
+        )
+    else:
+        print(f"Current {browser_type} version is {version}")
+
+    return version
+
+
+def read_version_from_cmd(cmd, pattern):
+    with subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            shell=True,
+    ) as stream:
+        stdout = stream.communicate()[0].decode()
+        version = re.search(pattern, stdout)
+        version = version.group(0) if version else None
+    return version
+
+
+def determine_powershell():
+    """Returns "True" if runs in Powershell and "False" if another console."""
+    cmd = "(dir 2>&1 *`|echo CMD);&<# rem #>echo powershell"
+    with subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            shell=True,
+    ) as stream:
+        stdout = stream.communicate()[0].decode()
+    return "" if stdout == "powershell" else "powershell"
+
+
+# def show_download_progress(response, _bytes_threshold=100):
+#     """ Opens up a response's content in chunks to show a progress bar with tqdm.
+#         Resets response._content when done so that response can be consumed again as normal. """
+#     total = int(response.headers.get("Content-Length", 0))
+#     if total > _bytes_threshold:
+#         content = bytearray()
+#         progress_bar = tqdm(desc="[WDM] - Downloading", total=total, unit_scale=True, unit_divisor=1024, unit="B")
+#         for chunk in response.iter_content(chunk_size=8192):
+#             if chunk:  # Filter out keep-alive new chunks
+#                 progress_bar.update(len(chunk))
+#                 content.extend(chunk)
+#         response._content = content  # To allow content to be "consumed" again
